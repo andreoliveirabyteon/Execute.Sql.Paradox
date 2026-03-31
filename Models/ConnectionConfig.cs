@@ -3,6 +3,7 @@ namespace Execute.Sql.Paradox.Models;
 public class ConnectionConfig
 {
     public string Name { get; set; } = string.Empty;
+    public string ConnectionType { get; set; } = "ODBC";
     public string ConnectionString { get; set; } = string.Empty;
     public string Driver { get; set; } = string.Empty;
     public string Server { get; set; } = string.Empty;
