@@ -1,4 +1,5 @@
 using System.Data.Odbc;
+using System.Data.OleDb;
 using System.Text.Json;
 using Execute.Sql.Paradox.Models;
 
@@ -58,12 +59,24 @@ public class ConnectionService
             File.Delete(file);
     }
 
-    public (bool success, string error) TestConnection(string connectionString)
+    public (bool success, string error) TestConnection(ConnectionConfig config)
     {
         try
         {
-            using var conn = new OdbcConnection(connectionString);
-            conn.Open();
+            if (config.ConnectionType == "OleDb")
+            {
+                if (!System.Runtime.InteropServices.RuntimeInformation.IsOSPlatform(System.Runtime.InteropServices.OSPlatform.Windows))
+                    return (false, "OleDb connections are only supported on Windows.");
+#pragma warning disable CA1416
+                using var conn = new OleDbConnection(config.ConnectionString);
+                conn.Open();
+#pragma warning restore CA1416
+            }
+            else
+            {
+                using var conn = new OdbcConnection(config.ConnectionString);
+                conn.Open();
+            }
             return (true, string.Empty);
         }
         catch (Exception ex)
@@ -94,36 +107,27 @@ public class ConnectionService
 
         try
         {
-            using var conn = new OdbcConnection(config.ConnectionString);
-            conn.Open();
-            using var cmd = new OdbcCommand(sql, conn);
-
-            var trimmed = sql.TrimStart();
-            var isQuery = trimmed.StartsWith("SELECT", StringComparison.OrdinalIgnoreCase)
-                       || trimmed.StartsWith("WITH", StringComparison.OrdinalIgnoreCase)
-                       || trimmed.StartsWith("SHOW", StringComparison.OrdinalIgnoreCase)
-                       || trimmed.StartsWith("DESCRIBE", StringComparison.OrdinalIgnoreCase)
-                       || trimmed.StartsWith("EXEC", StringComparison.OrdinalIgnoreCase);
-
-            result.IsQuery = isQuery;
-
-            if (isQuery)
+            if (config.ConnectionType == "OleDb")
             {
-                using var reader = cmd.ExecuteReader();
-                for (int i = 0; i < reader.FieldCount; i++)
-                    result.Columns.Add(reader.GetName(i));
-
-                while (reader.Read())
+                if (!System.Runtime.InteropServices.RuntimeInformation.IsOSPlatform(System.Runtime.InteropServices.OSPlatform.Windows))
                 {
-                    var row = new List<string?>();
-                    for (int i = 0; i < reader.FieldCount; i++)
-                        row.Add(reader.IsDBNull(i) ? null : reader.GetValue(i)?.ToString());
-                    result.Rows.Add(row);
+                    result.Success = false;
+                    result.ErrorMessage = "OleDb connections are only supported on Windows.";
+                    return result;
                 }
+#pragma warning disable CA1416
+                using var conn = new OleDbConnection(config.ConnectionString);
+                conn.Open();
+                using var cmd = new OleDbCommand(sql, conn);
+                ExecuteCommand(cmd, result);
+#pragma warning restore CA1416
             }
             else
             {
-                result.RowsAffected = cmd.ExecuteNonQuery();
+                using var conn = new OdbcConnection(config.ConnectionString);
+                conn.Open();
+                using var cmd = new OdbcCommand(sql, conn);
+                ExecuteCommand(cmd, result);
             }
 
             result.Success = true;
@@ -135,6 +139,37 @@ public class ConnectionService
         }
 
         return result;
+    }
+
+    private static void ExecuteCommand(System.Data.Common.DbCommand cmd, SqlExecutionResult result)
+    {
+        var trimmed = cmd.CommandText.TrimStart();
+        var isQuery = trimmed.StartsWith("SELECT", StringComparison.OrdinalIgnoreCase)
+                   || trimmed.StartsWith("WITH", StringComparison.OrdinalIgnoreCase)
+                   || trimmed.StartsWith("SHOW", StringComparison.OrdinalIgnoreCase)
+                   || trimmed.StartsWith("DESCRIBE", StringComparison.OrdinalIgnoreCase)
+                   || trimmed.StartsWith("EXEC", StringComparison.OrdinalIgnoreCase);
+
+        result.IsQuery = isQuery;
+
+        if (isQuery)
+        {
+            using var reader = cmd.ExecuteReader();
+            for (int i = 0; i < reader.FieldCount; i++)
+                result.Columns.Add(reader.GetName(i));
+
+            while (reader.Read())
+            {
+                var row = new List<string?>();
+                for (int i = 0; i < reader.FieldCount; i++)
+                    row.Add(reader.IsDBNull(i) ? null : reader.GetValue(i)?.ToString());
+                result.Rows.Add(row);
+            }
+        }
+        else
+        {
+            result.RowsAffected = cmd.ExecuteNonQuery();
+        }
     }
 
     private void SaveSqlCommand(string connectionName, string sql)

@@ -27,7 +27,7 @@ public class ConnectionController : Controller
         var connectionString = BuildConnectionString(model);
         model.ConnectionString = connectionString;
 
-        var (success, error) = _connectionService.TestConnection(connectionString);
+        var (success, error) = _connectionService.TestConnection(model);
 
         if (!success)
         {
@@ -70,16 +70,32 @@ public class ConnectionController : Controller
 
         var parts = new List<string>();
 
-        if (!string.IsNullOrWhiteSpace(model.Driver))
-            parts.Add($"Driver={{{model.Driver}}}");
-        if (!string.IsNullOrWhiteSpace(model.Server))
-            parts.Add($"Server={model.Server}");
-        if (!string.IsNullOrWhiteSpace(model.Database))
-            parts.Add($"Database={model.Database}");
-        if (!string.IsNullOrWhiteSpace(model.Username))
-            parts.Add($"Uid={model.Username}");
-        if (!string.IsNullOrWhiteSpace(model.Password))
-            parts.Add($"Pwd={model.Password}");
+        if (model.ConnectionType == "OleDb")
+        {
+            if (!string.IsNullOrWhiteSpace(model.Driver))
+                parts.Add($"Provider={model.Driver}");
+            if (!string.IsNullOrWhiteSpace(model.Server))
+                parts.Add($"Data Source={model.Server}");
+            if (!string.IsNullOrWhiteSpace(model.Database))
+                parts.Add($"Initial Catalog={model.Database}");
+            if (!string.IsNullOrWhiteSpace(model.Username))
+                parts.Add($"User ID={model.Username}");
+            if (!string.IsNullOrWhiteSpace(model.Password))
+                parts.Add($"Password={model.Password}");
+        }
+        else
+        {
+            if (!string.IsNullOrWhiteSpace(model.Driver))
+                parts.Add($"Driver={{{model.Driver}}}");
+            if (!string.IsNullOrWhiteSpace(model.Server))
+                parts.Add($"Server={model.Server}");
+            if (!string.IsNullOrWhiteSpace(model.Database))
+                parts.Add($"Database={model.Database}");
+            if (!string.IsNullOrWhiteSpace(model.Username))
+                parts.Add($"Uid={model.Username}");
+            if (!string.IsNullOrWhiteSpace(model.Password))
+                parts.Add($"Pwd={model.Password}");
+        }
 
         return string.Join(";", parts);
     }
