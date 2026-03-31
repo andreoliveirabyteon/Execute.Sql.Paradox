@@ -21,6 +21,7 @@ public class ConnectionController : Controller
 
     // POST /Connection/Test
     [HttpPost]
+    [ValidateAntiForgeryToken]
     public IActionResult Test(ConnectionConfig model)
     {
         var connectionString = BuildConnectionString(model);
@@ -42,6 +43,7 @@ public class ConnectionController : Controller
 
     // POST /Connection/Save
     [HttpPost]
+    [ValidateAntiForgeryToken]
     public IActionResult Save(ConnectionConfig model)
     {
         model.ConnectionString = BuildConnectionString(model);
@@ -53,6 +55,7 @@ public class ConnectionController : Controller
 
     // POST /Connection/Delete
     [HttpPost]
+    [ValidateAntiForgeryToken]
     public IActionResult Delete(string name)
     {
         _connectionService.DeleteConnection(name);

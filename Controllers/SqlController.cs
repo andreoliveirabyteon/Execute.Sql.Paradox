@@ -24,6 +24,7 @@ public class SqlController : Controller
 
     // POST /Sql/Execute
     [HttpPost]
+    [ValidateAntiForgeryToken]
     public IActionResult Execute(SqlExecutionRequest request)
     {
         var connections = _connectionService.GetAllConnections();
