@@ -1,0 +1,134 @@
+@model Execute.Sql.Paradox.Models.ConnectionConfig
+@{
+    ViewData["Title"] = "Nova Conexão";
+    bool testSuccess = ViewBag.TestSuccess == true;
+    bool alreadyExists = ViewBag.AlreadyExists == true;
+    string? testError = ViewBag.TestError as string;
+}
+
+<h2 class="mb-4">🔌 Nova Conexão ODBC</h2>
+
+<div class="row">
+    <div class="col-md-8">
+        @if (!string.IsNullOrEmpty(testError))
+        {
+            <div class="alert alert-danger">
+                <strong>Erro ao testar conexão:</strong> @testError
+            </div>
+        }
+
+        @if (testSuccess && alreadyExists)
+        {
+            <div class="alert alert-warning">
+                <strong>Conexão testada com sucesso!</strong>
+                Uma conexão com o nome <strong>@Model.Name</strong> já existe.
+                Deseja sobrescrever?
+                <div class="mt-2">
+                    <form asp-controller="Connection" asp-action="Save" method="post" class="d-inline">
+                        <input type="hidden" name="Name" value="@Model.Name" />
+                        <input type="hidden" name="ConnectionString" value="@Model.ConnectionString" />
+                        <input type="hidden" name="Driver" value="@Model.Driver" />
+                        <input type="hidden" name="Server" value="@Model.Server" />
+                        <input type="hidden" name="Database" value="@Model.Database" />
+                        <input type="hidden" name="Username" value="@Model.Username" />
+                        <input type="hidden" name="Password" value="@Model.Password" />
+                        <button type="submit" class="btn btn-warning btn-sm">Sobrescrever</button>
+                    </form>
+                    <a asp-controller="Home" asp-action="Index" class="btn btn-primary btn-sm ms-2">Ir para o Menu Principal</a>
+                </div>
+            </div>
+        }
+
+        @if (testSuccess && !alreadyExists)
+        {
+            <div class="alert alert-success">
+                <strong>✅ Conexão testada com sucesso!</strong>
+                Deseja salvar esta conexão?
+                <div class="mt-2">
+                    <form asp-controller="Connection" asp-action="Save" method="post" class="d-inline">
+                        <input type="hidden" name="Name" value="@Model.Name" />
+                        <input type="hidden" name="ConnectionString" value="@Model.ConnectionString" />
+                        <input type="hidden" name="Driver" value="@Model.Driver" />
+                        <input type="hidden" name="Server" value="@Model.Server" />
+                        <input type="hidden" name="Database" value="@Model.Database" />
+                        <input type="hidden" name="Username" value="@Model.Username" />
+                        <input type="hidden" name="Password" value="@Model.Password" />
+                        <button type="submit" class="btn btn-success btn-sm">💾 Salvar Conexão</button>
+                    </form>
+                </div>
+            </div>
+        }
+
+        <form asp-controller="Connection" asp-action="Test" method="post">
+            <div class="card shadow-sm">
+                <div class="card-header bg-dark text-white">Parâmetros da Conexão</div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Nome da Conexão *</label>
+                        <input type="text" name="Name" value="@Model.Name" class="form-control" required
+                               placeholder="ex: MinhaConexao" />
+                        <div class="form-text">Identificador único para esta conexão.</div>
+                    </div>
+
+                    <hr />
+                    <p class="text-muted">Preencha os campos individuais <strong>ou</strong> informe a string de conexão completa:</p>
+
+                    <div class="mb-3">
+                        <label class="form-label">Driver ODBC</label>
+                        <input type="text" name="Driver" value="@Model.Driver" class="form-control"
+                               placeholder="ex: MySQL ODBC 8.0 Unicode Driver" />
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Servidor</label>
+                        <input type="text" name="Server" value="@Model.Server" class="form-control"
+                               placeholder="ex: localhost ou 192.168.1.1" />
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Banco de Dados</label>
+                        <input type="text" name="Database" value="@Model.Database" class="form-control"
+                               placeholder="ex: NomeDoBanco" />
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Usuário</label>
+                            <input type="text" name="Username" value="@Model.Username" class="form-control"
+                                   placeholder="ex: root" />
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Senha</label>
+                            <input type="password" name="Password" value="@Model.Password" class="form-control" />
+                        </div>
+                    </div>
+
+                    <hr />
+                    <div class="mb-3">
+                        <label class="form-label">String de Conexão Completa</label>
+                        <textarea name="ConnectionString" class="form-control font-monospace" rows="3"
+                                  placeholder="Driver={MySQL ODBC 8.0 Unicode Driver};Server=localhost;Database=test;Uid=root;Pwd=secret;">@Model.ConnectionString</textarea>
+                        <div class="form-text">Se preenchida, esta string sobrescreve os campos acima.</div>
+                    </div>
+                </div>
+                <div class="card-footer d-flex gap-2">
+                    <button type="submit" class="btn btn-primary">🔍 Testar Conexão</button>
+                    <a asp-controller="Home" asp-action="Index" class="btn btn-outline-secondary">Cancelar</a>
+                </div>
+            </div>
+        </form>
+    </div>
+
+    <div class="col-md-4">
+        <div class="card bg-light">
+            <div class="card-header">💡 Exemplos de Strings de Conexão ODBC</div>
+            <div class="card-body small">
+                <p><strong>MySQL:</strong></p>
+                <code class="d-block mb-2">Driver={MySQL ODBC 8.0 Unicode Driver};Server=localhost;Database=test;Uid=root;Pwd=senha;</code>
+                <p><strong>SQL Server:</strong></p>
+                <code class="d-block mb-2">Driver={ODBC Driver 17 for SQL Server};Server=localhost;Database=test;Uid=sa;Pwd=senha;</code>
+                <p><strong>PostgreSQL:</strong></p>
+                <code class="d-block mb-2">Driver={PostgreSQL Unicode};Server=localhost;Port=5432;Database=test;Uid=postgres;Pwd=senha;</code>
+                <p><strong>Paradox:</strong></p>
+                <code class="d-block">Driver={Microsoft Paradox Driver (*.db)};DriverID=538;Fil=Paradox 5.X;DefaultDir=C:\data;Dbq=C:\data;</code>
+            </div>
+        </div>
+    </div>
+</div>
