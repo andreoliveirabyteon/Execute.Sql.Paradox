@@ -2,6 +2,9 @@ namespace Execute.Sql.Paradox.Models;
 
 public class ConnectionConfig
 {
+    public static readonly IReadOnlyList<string> ParadoxVersions =
+        new[] { "Paradox 3.X", "Paradox 4.X", "Paradox 5.X", "Paradox 7.X" };
+
     public string Name { get; set; } = string.Empty;
     public string ConnectionType { get; set; } = "ODBC";
     public string ConnectionString { get; set; } = string.Empty;

@@ -133,8 +133,13 @@
                                 <div class="row">
                                     <div class="col-md-6 mb-3">
                                         <label class="form-label">Fil (versão Paradox)</label>
-                                        <input type="text" name="OdbcFil" value="@Model.OdbcFil" class="form-control"
-                                               placeholder="Paradox 5.X" />
+                                        <select name="OdbcFil" class="form-select">
+                                            @foreach (var v in Execute.Sql.Paradox.Models.ConnectionConfig.ParadoxVersions)
+                                            {
+                                                <option value="@v" @(Model.OdbcFil == v ? "selected" : "")>@v</option>
+                                            }
+                                        </select>
+                                        <div class="form-text">Deve corresponder à versão real dos arquivos <code>.db</code>.</div>
                                     </div>
                                     <div class="col-md-6 mb-3">
                                         <label class="form-label">DriverID</label>
@@ -206,7 +211,7 @@
                 <p><strong>PostgreSQL:</strong></p>
                 <code class="d-block mb-2">Driver={PostgreSQL Unicode};Server=localhost;Port=5432;Database=test;Uid=postgres;Pwd=senha;</code>
                 <p><strong>Paradox:</strong></p>
-                <code class="d-block">Driver={Microsoft Paradox Driver (*.db)};DriverID=538;Fil=Paradox 5.X;DefaultDir=C:\data;Dbq=C:\data;</code>
+                <code class="d-block">Driver={Microsoft Paradox Driver (*.db )};DriverID=538;Fil=Paradox 5.X;DefaultDir=C:\data;Dbq=C:\data;CollatingSequence=ASCII;</code>
             </div>
         </div>
         <div class="card bg-light mb-3">
