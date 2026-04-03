@@ -20,17 +20,17 @@ namespace OdbcConsole
             string? sqlFile = null;
             string? connectionString = null;
 
-            for (int i = 0; i < args.Length - 1; i++)
+            for (int i = 0; i < args.Length; i++)
             {
                 switch (args[i])
                 {
-                    case "--dsn":           dsnName          = args[++i]; break;
-                    case "--driver":        driverPath       = args[++i]; break;
-                    case "--dir":           defaultDir       = args[++i]; break;
-                    case "--fil":           fil              = args[++i]; break;
-                    case "--driverid":      driverId         = args[++i]; break;
-                    case "--sqlfile":       sqlFile          = args[++i]; break;
-                    case "--connection-string": connectionString = args[++i]; break;
+                    case "--dsn":           if (i + 1 < args.Length) dsnName          = args[++i]; break;
+                    case "--driver":        if (i + 1 < args.Length) driverPath       = args[++i]; break;
+                    case "--dir":           if (i + 1 < args.Length) defaultDir       = args[++i]; break;
+                    case "--fil":           if (i + 1 < args.Length) fil              = args[++i]; break;
+                    case "--driverid":      if (i + 1 < args.Length) driverId         = args[++i]; break;
+                    case "--sqlfile":       if (i + 1 < args.Length) sqlFile          = args[++i]; break;
+                    case "--connection-string": if (i + 1 < args.Length) connectionString = args[++i]; break;
                 }
             }
 

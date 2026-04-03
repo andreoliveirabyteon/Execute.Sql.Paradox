@@ -79,7 +79,7 @@ public class ConnectionService
                     return (false, "O campo 'Diretório Paradox (DefaultDir)' é obrigatório para conexões via console ODBC.");
                 if (!Directory.Exists(config.OdbcDefaultDir))
                     return (false, $"Diretório não encontrado: {config.OdbcDefaultDir}");
-                if (!File.Exists(config.OdbcDriverPath))
+                if (string.IsNullOrWhiteSpace(config.OdbcDriverPath) || !File.Exists(config.OdbcDriverPath))
                     return (false, $"Driver ODBC não encontrado: {config.OdbcDriverPath}");
                 return (true, string.Empty);
             }
@@ -197,7 +197,13 @@ public class ConnectionService
             process.Start();
             string output = process.StandardOutput.ReadToEnd();
             string error = process.StandardError.ReadToEnd();
-            process.WaitForExit(30000);
+            if (!process.WaitForExit(30000))
+            {
+                process.Kill();
+                result.Success = false;
+                result.ErrorMessage = "O console ODBC excedeu o tempo limite de 30 segundos.";
+                return result;
+            }
 
             if (string.IsNullOrWhiteSpace(output))
             {
