@@ -76,15 +76,16 @@ namespace OdbcConsole
         }
 
         /// <summary>
-        /// Registra um DSN ODBC para Paradox no registro do Windows (HKLM).
+        /// Registra um DSN ODBC para Paradox no registro do Windows (HKCU).
+        /// Utiliza HKEY_CURRENT_USER para evitar necessidade de privilégios de administrador.
         /// </summary>
         static void SetupOdbcDsn(string dsnName, string driverPath, string defaultDir, string fil, string driverId)
         {
             if (!RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
                 throw new PlatformNotSupportedException("O registro ODBC só é suportado no Windows.");
 
-            using RegistryKey key = Registry.LocalMachine.CreateSubKey(
-                $@"SOFTWARE\ODBC\ODBC.INI\{dsnName}");
+            using RegistryKey key = Registry.CurrentUser.CreateSubKey(
+                $@"Software\ODBC\ODBC.INI\{dsnName}");
 
             key.SetValue("Driver",     driverPath);
             key.SetValue("DefaultDir", defaultDir);
@@ -93,8 +94,8 @@ namespace OdbcConsole
             key.SetValue("DBQ",        defaultDir);
 
             // Registra o DSN na lista de data sources ODBC
-            using RegistryKey sources = Registry.LocalMachine.CreateSubKey(
-                @"SOFTWARE\ODBC\ODBC.INI\ODBC Data Sources");
+            using RegistryKey sources = Registry.CurrentUser.CreateSubKey(
+                @"Software\ODBC\ODBC.INI\ODBC Data Sources");
             sources.SetValue(dsnName, "Microsoft Paradox Driver (*.db )");
         }
 
