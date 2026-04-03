@@ -11,4 +11,11 @@
     <PackageReference Include="System.Data.OleDb" Version="8.0.0" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Compile Remove="OdbcConsole\**" />
+    <Content Remove="OdbcConsole\**" />
+    <EmbeddedResource Remove="OdbcConsole\**" />
+    <None Remove="OdbcConsole\**" />
+  </ItemGroup>
+
 </Project>

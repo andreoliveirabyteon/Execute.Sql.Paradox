@@ -5,6 +5,7 @@
     bool alreadyExists = ViewBag.AlreadyExists == true;
     string? testError = ViewBag.TestError as string;
     string connType = Model.ConnectionType ?? "ODBC";
+    bool useConsole = Model.UseOdbcConsole;
 }
 
 <h2 class="mb-4">🔌 Nova Conexão</h2>
@@ -34,6 +35,11 @@
                         <input type="hidden" name="Database" value="@Model.Database" />
                         <input type="hidden" name="Username" value="@Model.Username" />
                         <input type="hidden" name="Password" value="@Model.Password" />
+                        <input type="hidden" name="UseOdbcConsole" value="@Model.UseOdbcConsole.ToString().ToLower()" />
+                        <input type="hidden" name="OdbcDriverPath" value="@Model.OdbcDriverPath" />
+                        <input type="hidden" name="OdbcDefaultDir" value="@Model.OdbcDefaultDir" />
+                        <input type="hidden" name="OdbcFil" value="@Model.OdbcFil" />
+                        <input type="hidden" name="OdbcDriverId" value="@Model.OdbcDriverId" />
                         <button type="submit" class="btn btn-warning btn-sm">Sobrescrever</button>
                     </form>
                     <a asp-controller="Home" asp-action="Index" class="btn btn-primary btn-sm ms-2">Ir para o Menu Principal</a>
@@ -56,6 +62,11 @@
                         <input type="hidden" name="Database" value="@Model.Database" />
                         <input type="hidden" name="Username" value="@Model.Username" />
                         <input type="hidden" name="Password" value="@Model.Password" />
+                        <input type="hidden" name="UseOdbcConsole" value="@Model.UseOdbcConsole.ToString().ToLower()" />
+                        <input type="hidden" name="OdbcDriverPath" value="@Model.OdbcDriverPath" />
+                        <input type="hidden" name="OdbcDefaultDir" value="@Model.OdbcDefaultDir" />
+                        <input type="hidden" name="OdbcFil" value="@Model.OdbcFil" />
+                        <input type="hidden" name="OdbcDriverId" value="@Model.OdbcDriverId" />
                         <button type="submit" class="btn btn-success btn-sm">💾 Salvar Conexão</button>
                     </form>
                 </div>
@@ -85,6 +96,52 @@
                                 <input class="form-check-input" type="radio" name="ConnectionType" id="typeOleDb"
                                        value="OleDb" @(connType == "OleDb" ? "checked" : "") onchange="updateConnectionTypeLabels(this.value)" />
                                 <label class="form-check-label" for="typeOleDb">OleDb</label>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mb-3" id="paradoxConsoleSection">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" name="UseOdbcConsole" id="useOdbcConsole"
+                                   value="true" @(useConsole ? "checked" : "") onchange="toggleParadoxFields(this.checked)" />
+                            <label class="form-check-label fw-bold" for="useOdbcConsole">
+                                🗄️ Usar Console ODBC 32-bit (Paradox)
+                            </label>
+                            <div class="form-text">
+                                Habilite para bancos Paradox. Executa os comandos SQL via um console auxiliar de 32 bits
+                                que configura o DSN ODBC automaticamente no registro do Windows.
+                            </div>
+                        </div>
+                    </div>
+
+                    <div id="paradoxFields" style="display:@(useConsole ? "block" : "none")">
+                        <div class="card border-info mb-3">
+                            <div class="card-header bg-info text-white">⚙️ Configurações Paradox (Console ODBC 32-bit)</div>
+                            <div class="card-body">
+                                <div class="mb-3">
+                                    <label class="form-label">Caminho do Driver ODBC (DLL)</label>
+                                    <input type="text" name="OdbcDriverPath" value="@Model.OdbcDriverPath" class="form-control font-monospace"
+                                           placeholder="C:\Windows\SysWOW64\odbcjt32.dll" />
+                                    <div class="form-text">Caminho para <code>odbcjt32.dll</code> (normalmente em SysWOW64).</div>
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label">Diretório dos Arquivos Paradox (DefaultDir) *</label>
+                                    <input type="text" name="OdbcDefaultDir" value="@Model.OdbcDefaultDir" class="form-control font-monospace"
+                                           placeholder="ex: K:\fax" />
+                                    <div class="form-text">Pasta onde estão os arquivos <code>.db</code> do Paradox.</div>
+                                </div>
+                                <div class="row">
+                                    <div class="col-md-6 mb-3">
+                                        <label class="form-label">Fil (versão Paradox)</label>
+                                        <input type="text" name="OdbcFil" value="@Model.OdbcFil" class="form-control"
+                                               placeholder="Paradox 5.X" />
+                                    </div>
+                                    <div class="col-md-6 mb-3">
+                                        <label class="form-label">DriverID</label>
+                                        <input type="text" name="OdbcDriverId" value="@Model.OdbcDriverId" class="form-control"
+                                               placeholder="538" />
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -152,7 +209,7 @@
                 <code class="d-block">Driver={Microsoft Paradox Driver (*.db)};DriverID=538;Fil=Paradox 5.X;DefaultDir=C:\data;Dbq=C:\data;</code>
             </div>
         </div>
-        <div class="card bg-light">
+        <div class="card bg-light mb-3">
             <div class="card-header">💡 Exemplos de Strings de Conexão OleDb</div>
             <div class="card-body small">
                 <p><strong>Paradox (ACE):</strong></p>
@@ -163,6 +220,15 @@
                 <code class="d-block mb-2">Provider=SQLOLEDB;Data Source=localhost;Initial Catalog=test;User ID=sa;Password=senha;</code>
                 <p><strong>Access:</strong></p>
                 <code class="d-block">Provider=Microsoft.ACE.OLEDB.12.0;Data Source=C:\data\banco.accdb;Jet OLEDB:Database Password=senha;</code>
+            </div>
+        </div>
+        <div class="card bg-light">
+            <div class="card-header">ℹ️ Console ODBC 32-bit (Paradox)</div>
+            <div class="card-body small">
+                <p>O console auxiliar <code>OdbcConsole.exe</code> é necessário para acessar bancos Paradox via ODBC 32-bit.</p>
+                <p>Ele precisa ser compilado separadamente a partir do projeto <code>OdbcConsole/</code> e colocado em:</p>
+                <code class="d-block mb-2">OdbcConsole\OdbcConsole.exe</code>
+                <p class="mb-0 text-warning">⚠️ Requer execução como Administrador para gravar o DSN no registro do Windows.</p>
             </div>
         </div>
     </div>
@@ -181,6 +247,17 @@
             document.getElementById('inputConnectionString').placeholder = isOleDb
                 ? 'Provider=Microsoft.ACE.OLEDB.12.0;Data Source=C:\\data;Extended Properties="Paradox 5.x";'
                 : 'Driver={MySQL ODBC 8.0 Unicode Driver};Server=localhost;Database=test;Uid=root;Pwd=secret;';
+
+            // Show paradox console option only for ODBC
+            document.getElementById('paradoxConsoleSection').style.display = isOleDb ? 'none' : 'block';
+            if (isOleDb) {
+                document.getElementById('useOdbcConsole').checked = false;
+                document.getElementById('paradoxFields').style.display = 'none';
+            }
+        }
+
+        function toggleParadoxFields(checked) {
+            document.getElementById('paradoxFields').style.display = checked ? 'block' : 'none';
         }
     </script>
 }
