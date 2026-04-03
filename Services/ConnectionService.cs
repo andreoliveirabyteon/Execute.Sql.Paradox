@@ -1,7 +1,9 @@
 using System.Data.Odbc;
 using System.Data.OleDb;
+using System.Diagnostics;
 using System.Text.Json;
 using Execute.Sql.Paradox.Models;
+using Microsoft.Extensions.Configuration;
 
 namespace Execute.Sql.Paradox.Services;
 
@@ -9,13 +11,19 @@ public class ConnectionService
 {
     private readonly string _configPath;
     private readonly string _sqlCommandsPath;
+    private readonly string _odbcConsoleExecutable;
 
-    public ConnectionService(IWebHostEnvironment env)
+    public ConnectionService(IWebHostEnvironment env, IConfiguration configuration)
     {
         _configPath = Path.Combine(env.ContentRootPath, "config");
         _sqlCommandsPath = Path.Combine(env.ContentRootPath, "sqlComands");
         Directory.CreateDirectory(_configPath);
         Directory.CreateDirectory(_sqlCommandsPath);
+
+        var consolePath = configuration["OdbcConsole:ExecutablePath"] ?? @"OdbcConsole\OdbcConsole.exe";
+        _odbcConsoleExecutable = Path.IsPathRooted(consolePath)
+            ? consolePath
+            : Path.Combine(env.ContentRootPath, consolePath);
     }
 
     public List<ConnectionConfig> GetAllConnections()
@@ -63,6 +71,19 @@ public class ConnectionService
     {
         try
         {
+            if (config.UseOdbcConsole)
+            {
+                if (!System.Runtime.InteropServices.RuntimeInformation.IsOSPlatform(System.Runtime.InteropServices.OSPlatform.Windows))
+                    return (false, "O console ODBC 32-bit só é suportado no Windows.");
+                if (string.IsNullOrWhiteSpace(config.OdbcDefaultDir))
+                    return (false, "O campo 'Diretório Paradox (DefaultDir)' é obrigatório para conexões via console ODBC.");
+                if (!Directory.Exists(config.OdbcDefaultDir))
+                    return (false, $"Diretório não encontrado: {config.OdbcDefaultDir}");
+                if (!File.Exists(config.OdbcDriverPath))
+                    return (false, $"Driver ODBC não encontrado: {config.OdbcDriverPath}");
+                return (true, string.Empty);
+            }
+
             if (config.ConnectionType == "OleDb")
             {
                 if (!System.Runtime.InteropServices.RuntimeInformation.IsOSPlatform(System.Runtime.InteropServices.OSPlatform.Windows))
@@ -107,7 +128,11 @@ public class ConnectionService
 
         try
         {
-            if (config.ConnectionType == "OleDb")
+            if (config.UseOdbcConsole)
+            {
+                return ExecuteSqlViaConsole(config, sql);
+            }
+            else if (config.ConnectionType == "OleDb")
             {
                 if (!System.Runtime.InteropServices.RuntimeInformation.IsOSPlatform(System.Runtime.InteropServices.OSPlatform.Windows))
                 {
@@ -140,6 +165,96 @@ public class ConnectionService
 
         return result;
     }
+
+    private SqlExecutionResult ExecuteSqlViaConsole(ConnectionConfig config, string sql)
+    {
+        var result = new SqlExecutionResult
+        {
+            ConnectionName = config.Name,
+            SqlCommand = sql
+        };
+
+        var sqlTempFile = Path.Combine(Path.GetTempPath(), $"odbc_sql_{Guid.NewGuid():N}.sql");
+        try
+        {
+            File.WriteAllText(sqlTempFile, sql);
+
+            var args = BuildConsoleArgs(config, sqlTempFile);
+
+            using var process = new Process
+            {
+                StartInfo = new ProcessStartInfo
+                {
+                    FileName = _odbcConsoleExecutable,
+                    Arguments = args,
+                    RedirectStandardOutput = true,
+                    RedirectStandardError = true,
+                    UseShellExecute = false,
+                    CreateNoWindow = true
+                }
+            };
+
+            process.Start();
+            string output = process.StandardOutput.ReadToEnd();
+            string error = process.StandardError.ReadToEnd();
+            process.WaitForExit(30000);
+
+            if (string.IsNullOrWhiteSpace(output))
+            {
+                result.Success = false;
+                result.ErrorMessage = string.IsNullOrWhiteSpace(error)
+                    ? "O console ODBC não retornou dados."
+                    : error;
+                return result;
+            }
+
+            var consoleResult = JsonSerializer.Deserialize<ConsoleExecutionResult>(output,
+                new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+
+            if (consoleResult == null)
+            {
+                result.Success = false;
+                result.ErrorMessage = "Falha ao interpretar o resultado do console ODBC.";
+                return result;
+            }
+
+            result.Success = consoleResult.Success;
+            result.ErrorMessage = consoleResult.ErrorMessage;
+            result.IsQuery = consoleResult.IsQuery;
+            result.Columns = consoleResult.Columns ?? new List<string>();
+            result.Rows = consoleResult.Rows ?? new List<List<string?>>();
+            result.RowsAffected = consoleResult.RowsAffected;
+        }
+        catch (Exception ex)
+        {
+            result.Success = false;
+            result.ErrorMessage = $"Erro ao executar o console ODBC: {ex.Message}";
+        }
+        finally
+        {
+            if (File.Exists(sqlTempFile))
+                File.Delete(sqlTempFile);
+        }
+
+        return result;
+    }
+
+    private static string BuildConsoleArgs(ConnectionConfig config, string sqlTempFile)
+    {
+        if (!string.IsNullOrWhiteSpace(config.ConnectionString))
+        {
+            return $"--connection-string \"{EscapeArg(config.ConnectionString)}\" --sqlfile \"{EscapeArg(sqlTempFile)}\"";
+        }
+
+        return $"--dsn \"{EscapeArg(config.Name)}\" " +
+               $"--driver \"{EscapeArg(config.OdbcDriverPath)}\" " +
+               $"--dir \"{EscapeArg(config.OdbcDefaultDir)}\" " +
+               $"--fil \"{EscapeArg(config.OdbcFil)}\" " +
+               $"--driverid \"{EscapeArg(config.OdbcDriverId)}\" " +
+               $"--sqlfile \"{EscapeArg(sqlTempFile)}\"";
+    }
+
+    private static string EscapeArg(string arg) => arg.Replace("\"", "\\\"");
 
     private static void ExecuteCommand(System.Data.Common.DbCommand cmd, SqlExecutionResult result)
     {
@@ -186,4 +301,14 @@ public class ConnectionService
         var safeName = string.Concat(name.Split(Path.GetInvalidFileNameChars()));
         return Path.Combine(_configPath, $"{safeName}.json");
     }
+}
+
+internal class ConsoleExecutionResult
+{
+    public bool Success { get; set; }
+    public string? ErrorMessage { get; set; }
+    public bool IsQuery { get; set; }
+    public List<string>? Columns { get; set; }
+    public List<List<string?>>? Rows { get; set; }
+    public int RowsAffected { get; set; }
 }
