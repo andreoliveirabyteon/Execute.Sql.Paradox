@@ -87,11 +87,16 @@ namespace OdbcConsole
             using RegistryKey key = Registry.CurrentUser.CreateSubKey(
                 $@"Software\ODBC\ODBC.INI\{dsnName}");
 
-            key.SetValue("Driver",     driverPath);
-            key.SetValue("DefaultDir", defaultDir);
-            key.SetValue("DriverID",   driverId);
-            key.SetValue("Fil",        fil);
-            key.SetValue("DBQ",        defaultDir);
+            key.SetValue("Driver",             driverPath);
+            key.SetValue("DefaultDir",         defaultDir);
+            key.SetValue("DriverID",           driverId);
+            key.SetValue("Fil",                fil);
+            key.SetValue("DBQ",                defaultDir);
+            key.SetValue("CollatingSequence",  "ASCII");
+            key.SetValue("PageTimeout",        "5");
+            key.SetValue("SafeTransactions",   "0");
+            key.SetValue("Threads",            "3");
+            key.SetValue("UserCommitSync",     "Yes");
 
             // Registra o DSN na lista de data sources ODBC
             using RegistryKey sources = Registry.CurrentUser.CreateSubKey(
